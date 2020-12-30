@@ -14,8 +14,12 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import requests
+
 api_key = "d8rGpufpQNGHyN3hDWl5ai4r"
 secret_key = "06nes9pTy0RVwzMSatlTxWGB9WrDHYnC"
+
+api_key2 = "OOPoxyPGtufpv9HvKihWz1va"
+secret_key2 = "x7DQv35bKT36rywE5GloKr8XRUd4bndg"
 
 
 class Ui_Form(object):
@@ -62,7 +66,7 @@ class Ui_Form(object):
         self.horizontalLayout_2.addWidget(self.pushButton)
         self.label_3 = QtWidgets.QLabel(Form)
         self.label_3.setGeometry(QtCore.QRect(40, 150, 311, 241))
-        self.label_3.setStyleSheet("background-color: rgb(85, 255, 127);")
+        # self.label_3.setStyleSheet("background-color: rgb(85, 255, 127);")
         self.label_3.setText("")
         self.label_3.setObjectName("label_3")
         self.verticalLayoutWidget = QtWidgets.QWidget(Form)
@@ -72,7 +76,7 @@ class Ui_Form(object):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label_4 = QtWidgets.QLabel(self.verticalLayoutWidget)
-        self.label_4.setStyleSheet("background-color: rgb(0, 255, 255);")
+        # self.label_4.setStyleSheet("background-color: rgb(0, 255, 255);")
         self.label_4.setObjectName("label_4")
         self.verticalLayout.addWidget(self.label_4)
         self.pushButton_2 = QtWidgets.QPushButton(self.verticalLayoutWidget)
@@ -102,6 +106,11 @@ class Ui_Form(object):
         self.label_4.setText(_translate("Form", "显示识别结果"))
         self.pushButton_2.setText(_translate("Form", "复制到剪贴板"))
         self.pushButton.clicked.connect(self.openfile)
+        self.pushButton_2.clicked.connect(self.copyText)
+
+    def copyText(self):
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.label_4.text())
 
     def openfile(self):
         self.download_path = QFileDialog.getOpenFileName(self.horizontalLayoutWidget_2, "选择要识别的图片", "/",
@@ -120,12 +129,23 @@ class Ui_Form(object):
         # recognize category
         if self.comboBox.currentIndex() == 0:
             self.get_bankcard(self.get_token())
+        elif self.comboBox.currentIndex() == 1:
+            pass
+        elif self.comboBox.currentIndex() == 2:
+            self.get_plant(self.get_token_2())
 
     def get_token(self):
         host = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=' + api_key + '&client_secret=' + secret_key
         response = requests.get(host)
         if response:
             # print(response.json()['access_token'])
+            self.access_token = response.json()['access_token']
+            return self.access_token
+
+    def get_token_2(self):
+        host = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=' + api_key2 + '&client_secret=' + secret_key2
+        response = requests.get(host)
+        if response:
             self.access_token = response.json()['access_token']
             return self.access_token
 
@@ -161,6 +181,26 @@ class Ui_Form(object):
                 result += "解析错误！"
             # show result
             self.label_4.setText(result)
+
+    def get_plant(self, access_token):
+        request_url = "https://aip.baidubce.com/rest/2.0/image-classify/v1/plant"
+        # 二进制方式打开图片文件
+        f = open(self.download_path[0], 'rb')
+        img = base64.b64encode(f.read())
+
+        params = {"image": img}
+        request_url = request_url + "?access_token=" + access_token
+        headers = {'content-type': 'application/x-www-form-urlencoded'}
+        response = requests.post(request_url, data=params, headers=headers)
+        if response:
+            result = "识别结果：\n"
+            try:
+                for plant in response.json()['result']:
+                    result += '与 {} 的匹配率为 {}\n'.format(plant['name'], plant['score'])
+            except BaseException:
+                result += "无法识别！"
+            self.label_4.setText(result)
+
 
 
 if __name__ == '__main__':
